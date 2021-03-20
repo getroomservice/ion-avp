@@ -45,6 +45,8 @@ type WebRTCTransport struct {
 	pending   map[string][]PendingProcess // maps track id to pending element constructors
 	processes map[string]Element          // existing processes
 	onCloseFn func()
+
+	globalEid string
 }
 
 // NewWebRTCTransport creates a new webrtc transport
@@ -136,6 +138,14 @@ func NewWebRTCTransport(id string, c Config) *WebRTCTransport {
 			delete(t.pending, id)
 		}
 
+		if t.globalEid != "" {
+			e := registry.GetElement(t.globalEid)
+			if e != nil {
+				element := e(t.id, "", track.ID(), []byte{})
+				builder.AttachElement(element)
+			}
+		}
+
 		if track.Kind() == webrtc.RTPCodecTypeVideo {
 			err := sub.pc.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{SenderSSRC: uint32(track.SSRC()), MediaSSRC: uint32(track.SSRC())}})
 			if err != nil {
@@ -152,6 +162,13 @@ func NewWebRTCTransport(id string, c Config) *WebRTCTransport {
 			}
 			t.mu.Unlock()
 
+			//TODO: FIXME: this will close in the case there is one track and
+			//the user switches devices (i.e. changing microphones). then it is
+			//left in a bad state. maybe we should make sure the connection
+			//completely closes and tells the caller so they can create a new
+			//connection. we could also wait for some delay before cleaning up
+			//or dont disconnect until the stream is stopped by the
+			//user/control plane
 			if t.isEmpty() {
 				// No more tracks, cleanup transport
 				t.Close()
@@ -249,6 +266,19 @@ func (t *WebRTCTransport) Process(pid, tid, eid string, config []byte) error {
 	b.AttachElement(process)
 
 	return nil
+}
+
+func (t *WebRTCTransport) SetGlobalElement(eid string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.globalEid = eid
+
+	if e := registry.elements[eid]; e != nil {
+		for _, builder := range t.builders {
+			builder.AttachElement(e(t.id, "", builder.track.ID(), []byte{}))
+		}
+	}
+
 }
 
 // CreateOffer starts the PeerConnection and generates the localDescription
