@@ -1,4 +1,4 @@
-module github.com/getroomservice/ion-avp
+module github.com/pion/ion-avp
 
 go 1.15
 
