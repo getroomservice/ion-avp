@@ -39,30 +39,39 @@ type Builder struct {
 	sequence      uint16
 	track         *webrtc.TrackRemote
 	out           chan *Sample
+
+	codecId byte
 }
 
 // NewBuilder Initialize a new audio sample builder
 func NewBuilder(track *webrtc.TrackRemote, maxLate uint16) *Builder {
 	var depacketizer rtp.Depacketizer
 	var checker rtp.PartitionHeadChecker
+	var codecId byte
 	switch strings.ToLower(track.Codec().MimeType) {
 	case strings.ToLower(MimeTypeOpus):
 		depacketizer = &codecs.OpusPacket{}
 		checker = &codecs.OpusPartitionHeadChecker{}
+		codecId = TypeOpus
 	case strings.ToLower(MimeTypeVP8):
 		depacketizer = &codecs.VP8Packet{}
 		checker = &codecs.VP8PartitionHeadChecker{}
+		codecId = TypeVP8
 	case strings.ToLower(MimeTypeVP9):
 		depacketizer = &codecs.VP9Packet{}
 		checker = &codecs.VP9PartitionHeadChecker{}
+		codecId = TypeVP9
 	case strings.ToLower(MimeTypeH264):
 		depacketizer = &codecs.H264Packet{}
+		codecId = TypeH264
 	}
 
 	b := &Builder{
 		builder: samplebuilder.New(maxLate, depacketizer, track.Codec().ClockRate),
 		track:   track,
 		out:     make(chan *Sample, maxSize),
+
+		codecId: codecId,
 	}
 
 	if checker != nil {
@@ -128,7 +137,7 @@ func (b *Builder) build() {
 
 			b.out <- &Sample{
 				ID:             b.track.ID(),
-				Type:           int(b.track.Kind()),
+				Type:           b.codecId,
 				SequenceNumber: b.sequence,
 				Timestamp:      timestamp,
 				Payload:        sample.Data,
