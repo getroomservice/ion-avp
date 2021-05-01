@@ -141,7 +141,7 @@ func NewWebRTCTransport(id string, c Config) *WebRTCTransport {
 		if t.globalEid != "" {
 			e := registry.GetElement(t.globalEid)
 			if e != nil {
-				element := e(t.id, "", track.StreamID(), []byte{})
+				element := e(t.id, track.StreamID(), track.ID(), []byte{})
 				builder.AttachElement(element)
 			}
 		}
@@ -275,7 +275,7 @@ func (t *WebRTCTransport) SetGlobalElement(eid string) {
 
 	if e := registry.elements[eid]; e != nil {
 		for _, builder := range t.builders {
-			builder.AttachElement(e(t.id, "", builder.track.StreamID(), []byte{}))
+			builder.AttachElement(e(t.id, builder.track.StreamID(), builder.track.ID(), []byte{}))
 		}
 	}
 

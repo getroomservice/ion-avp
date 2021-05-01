@@ -47,7 +47,7 @@ func (c *Converter) Write(sample *avp.Sample) error {
 	}
 
 	return c.Node.Write(&avp.Sample{
-		Type:    c.typ,
+		Type:    byte(c.typ),
 		Payload: out,
 	})
 }
