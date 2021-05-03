@@ -161,18 +161,6 @@ func NewWebRTCTransport(id string, c Config) *WebRTCTransport {
 				delete(t.builders, id)
 			}
 			t.mu.Unlock()
-
-			//TODO: FIXME: this will close in the case there is one track and
-			//the user switches devices (i.e. changing microphones). then it is
-			//left in a bad state. maybe we should make sure the connection
-			//completely closes and tells the caller so they can create a new
-			//connection. we could also wait for some delay before cleaning up
-			//or dont disconnect until the stream is stopped by the
-			//user/control plane
-			if t.isEmpty() {
-				// No more tracks, cleanup transport
-				t.Close()
-			}
 		})
 	})
 
